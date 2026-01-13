@@ -46,7 +46,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <ul class="participants-list">
                 ${
                   participants.length > 0
-                    ? participants.map((email) => `<li>${email}</li>`).join("")
+                    ? participants.map((email) => `
+                        <li>
+                            <span class="participant-email">${email}</span>
+                            <button class="delete-btn" data-activity="${name}" data-email="${email}" title="Remove participant">🗑️</button>
+                        </li>
+                    `).join("")
                     : '<li class="no-participants">No participants yet</li>'
                 }
             </ul>
@@ -55,6 +60,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
       activitiesList.appendChild(activityCard);
     });
+
+    // Add event listeners to delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', handleDeleteParticipant);
+    });
+  }
+
+  async function handleDeleteParticipant(event) {
+    const button = event.target;
+    const activityName = button.getAttribute('data-activity');
+    const email = button.getAttribute('data-email');
+
+    if (!confirm(`Are you sure you want to remove ${email} from ${activityName}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activityName)}/participant?email=${encodeURIComponent(email)}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage(`Successfully removed ${email} from ${activityName}`, 'success');
+        // Reload activities to show updated participants
+        await loadActivities();
+      } else {
+        showMessage(data.detail || 'Error removing participant', 'error');
+      }
+    } catch (error) {
+      console.error('Error removing participant:', error);
+      showMessage('Error removing participant. Please try again.', 'error');
+    }
   }
 
   function populateActivityDropdown(activities) {
